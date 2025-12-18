@@ -1,13 +1,12 @@
 ## Proposal
 
-Allow Random Lottery Smart Contract to be deployed on Qubic.
+Allow qRWA Smart Contract to be deployed on Qubic.
 
 ## Available Options
 
 > Option 0: no, don’t allow
 
 > Option 1: yes, allow
-
 
 **Technical Description: qRWA Smart Contract**
 
@@ -26,6 +25,7 @@ The qRWA (Qubic Real World Asset) smart contract is a decentralized governance a
 The contract manages two distinct categories of assets:
 * **Native Governance Asset (QMINE):** Identified by `Asset Name: QMINE or 297666170193` and a specific issuer ID. This token dictates voting power and dividend claims.
 * **General Treasury Assets:** A generic `HashMap` implementation stores balances for arbitrary Qubic assets (shares of other SCs, IPO tokens, etc.) that have been deposited into the contract.
+* **Counting Logic: ALL QMINE that are managed by any SC: they move their asset around, but try to keep the balance unchanged.
 
 #### 2.2 Revenue Streams & "Splitter" Logic
 The contract distinguishes revenue based on its source to apply different fee models:
