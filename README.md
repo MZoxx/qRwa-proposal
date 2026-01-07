@@ -16,6 +16,8 @@ Allow qRWA Smart Contract to be deployed on Qubic.
 
 **Language:** C++
 
+**Qubic core pull:** https://github.com/qubic/core/pull/703#pullrequestreview-3634126784
+
 ### 1. Executive Summary
 The qRWA (Qubic Real World Asset) smart contract is a decentralized governance and revenue distribution protocol designed for the Qubic ecosystem. It serves as a DAO (Decentralized Autonomous Organization) for the **QMINE** asset, allowing token holders to govern protocol parameters and manage a diversified treasury of assets. The contract automates the ingestion of revenue (QUs), applies a configurable fee structure for operational costs (e.g., mining electricity/maintenance), and distributes net yields to QMINE holders (90%) and the contract's own shareholders (10%), while routing any dividends forfeited by moved tokens to the protocol developer.
 
