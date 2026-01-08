@@ -1,6 +1,6 @@
 ## Proposal
 
-Allow qRWA Smart Contract to be deployed on Qubic.
+Allow qRWA Smart Contract to be deployed in **EP196** on Qubic.
 
 ## Available Options
 
