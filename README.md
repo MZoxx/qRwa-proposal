@@ -17,10 +17,64 @@ Allow qRWA Smart Contract to be deployed in **EP196** on Qubic.
 **Language:** C++
 
 
-### 1. Executive Summary
-The qRWA (Qubic Real World Asset) smart contract is a decentralized governance and revenue distribution protocol designed for the Qubic ecosystem. It serves as a DAO (Decentralized Autonomous Organization) for the **QMINE** asset, allowing token holders to govern protocol parameters and manage a diversified treasury of assets. The contract automates the ingestion of revenue (QUs), applies a configurable fee structure for operational costs (e.g., mining electricity/maintenance), and distributes net yields to QMINE holders (90%) and the contract's own shareholders (10%), while routing any dividends forfeited by moved tokens to the protocol developer.
+1. Executive Summary
+The qRWA (Qubic Real World Asset) smart contract is a decentralized governance and revenue distribution protocol designed for the Qubic ecosystem. It serves as a DAO (Decentralized Autonomous Organization) for the QMINE asset, allowing token holders to govern protocol parameters and manage a diversified treasury of assets. The contract automates the ingestion of revenue (QUs), applies a configurable fee structure for operational costs (e.g., mining electricity/maintenance), and distributes net yields to QMINE holders (90%) and the contract's own shareholders (10%), while routing any dividends forfeited by moved tokens to the protocol developer.
 
-## 2. qRWA schema:
+2. Core Architecture
+2.1 Asset Management
+The contract manages two distinct categories of assets:
+
+Native Governance Asset (QMINE): Identified by Asset Name: QMINE or 297666170193 and a specific issuer ID. This token dictates voting power and dividend claims.
+General Treasury Assets: A generic HashMap implementation stores balances for arbitrary Qubic assets (shares of other SCs, IPO tokens, etc.) that have been deposited into the contract.
+2.2 Revenue Streams & "Splitter" Logic
+The contract distinguishes revenue based on its source to apply different fee models:
+
+Pool A (Miner Revenue): Ingests QU transfers from mining. This pool is subject to Mining Fees (Electricity, Maintenance, Reinvestment) before distribution.
+Pool B (General Asset Revenue): Ingests QU transfers from other Asset dividends. This pool bypasses operational fees and is allocated 100% to the dividend pools.
+QMINE Remainder (Dev Dividends): A catch-all mechanism for the QMINE dividend pool. Because dividend eligibility is based on the minimum balance held throughout the epoch (min(Begin, End)), tokens that are moved or sold during an epoch result in "unclaimed" portions of the dividend pool. These remainder funds are automatically calculated and transferred to the qmineDevAddress.
+2.3 Governance Module
+The governance model utilizes a "Snapshot" mechanism, calculating voting power as min(Balance_Begin_Epoch, Balance_End_Epoch) to prevent flash-voting attacks.
+
+Parameter Governance:
+
+Mechanism: A rotating buffer of 64 slots (mGovPolls).
+Function: Holders vote on qRWAGovParams (Admin ID, Fee Receiver IDs, Fee Percentages).
+Threshold: Strict super-majority (2/3 + 1) required to modify state.
+Execution: Automated at END_EPOCH.
+Treasury Governance (Asset Release):
+
+Mechanism: Admin-initiated proposals to release assets to specific destinations.
+Storage Optimization: Voter state is compressed into bit_64 bitfields, allowing users to track votes on 64 simultaneous polls with minimal memory footprint.
+Execution: If a poll passes (YES votes ≥ 2/3 Quorum), the contract invokes qpi.transferShareOwnershipAndPossession to execute the transaction trustlessly.
+3. State Machine Lifecycle
+3.1 Initialization (INITIALIZE)
+Sets default governance parameters (Fees: 35% Electricity, 5% Maintenance, 10% Reinvestment), designates the initial Admin, and zeros out all revenue pools and maps.
+
+3.2 Epoch Transition
+BEGIN_EPOCH:
+Resets poll counters.
+Iterates through QMINE asset holders to create a mBeginEpochBalances snapshot.
+END_EPOCH:
+Creates mEndEpochBalances snapshot.
+Tallying: Re-calculates all active poll scores by iterating through voters and applying the min(Begin, End) voting power logic.
+Execution: Applies successful Governance Parameter changes and executes successful Asset Release transfers.
+Payout Snapshot: Copies the finalized epoch balances into mPayout... maps for the dividend distributor.
+3.3 Tick Processing (END_TICK)
+Dividend Distribution: Checks if the current time matches the payout schedule (Friday, 12:00 UTC) and if QRWA_MIN_PAYOUT_INTERVAL_MS has elapsed.
+Fee Extraction: If valid, calculates operational fees from Pool A and transfers them to the defined electricityAddress, maintenanceAddress, etc.
+Yield Allocation:
+90% of Net Revenue 
+→
+ mQmineDividendPool
+The contract iterates through all holders in the snapshot.
+Payout Calculation: (min(Begin, End) * mQmineDividendPool) / Total_Supply_Begin, where mQmineDividendPool is the accumulation of 90% of the net revenue collected by the contract since the last payout. (mQmineDividendPool = 90% of (Pool A (after mining fees) + Pool B)).
+Remainder Sweep: Since the sum of min(Begin, End) balances is always less than or equal to Total_Supply_Begin (due to token transfers), a remainder is left in the pool. This remainder—representing dividends for "moved" shares—is transferred entirely to the QMINE Developer Address (qmineDevAddress).
+10% of Net Revenue 
+→
+ mQRWADividendPool (Broadcast via qpi.distributeDividends to SC shareholders).
+
+
+## 2. qRWA schema, mining operations payout + SC holdings payout.
 
 ```1. Fixed Operational Costs (50%)
 These are deducted first to ensure the mining operation stays running.
